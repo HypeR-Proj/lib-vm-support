@@ -143,8 +143,10 @@ impl Device {
         device.kind = DeviceKind::Network;
         device.network = Some(configuration);
         // MAC is implemented by this configuration model, not Linux vhost.
-        // No checksum/GSO, mergeable RX, control queue or multiqueue is offered.
-        device.offered |= virtio_net::MAC_FEATURE;
+        // TX checksum/TSO metadata is handled by the backend's TAP. RX
+        // offloads, mergeable buffers, control queues and multiqueue stay off.
+        device.offered |=
+            virtio_net::MAC_FEATURE | virtio_net::supported_offloads(backend_features);
         Ok(device)
     }
 
@@ -300,7 +302,9 @@ impl Device {
             return Err(Error::InvalidStatus);
         }
         if value & FEATURES_OK != 0
-            && (self.features & !self.offered != 0 || self.features & VERSION_1 == 0)
+            && (self.features & !self.offered != 0
+                || self.features & VERSION_1 == 0
+                || (self.kind == DeviceKind::Network && !virtio_net::valid_features(self.features)))
         {
             self.status = value & !(FEATURES_OK | DRIVER_OK);
             return Ok(None);
