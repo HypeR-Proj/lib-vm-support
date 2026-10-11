@@ -71,10 +71,11 @@ impl ReadAt for Source {
 }
 
 impl Image {
-    pub fn load(definition: &hyper_vm_policy::fleet::Definition) -> Result<Self> {
+    /// The caller selects the image namespace before loading. Preparation owns
+    /// the file capability and performs no path lookup during a root switch.
+    pub fn load(definition: &hyper_vm_policy::fleet::Definition, file: File) -> Result<Self> {
         definition.validate()?;
         let path = &definition.image;
-        let file = File::open(path).map_err(|error| format!("open {path}: {error}"))?;
         let length = file
             .metadata()
             .map_err(|error| format!("stat {path}: {error}"))?
