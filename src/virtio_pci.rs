@@ -36,8 +36,9 @@ impl Device {
         let (id, class, length) = match core.kind {
             DeviceKind::Scsi => (0x1048, 0x010000, 36),
             DeviceKind::Network => (0x1041, 0x020000, 6),
+            DeviceKind::Console => (0x1043, 0x078000, 12),
         };
-        let mut capabilities = [0u8; 88];
+        let mut capabilities = [0u8; 148];
         for (start, next, kind, offset, size) in [
             (0, 0x50, 1, 0, 56u32),
             (16, 0x64, 2, NOTIFY_OFFSET as u32, 2),
@@ -53,9 +54,28 @@ impl Device {
             cap[8..12].copy_from_slice(&offset.to_le_bytes());
             cap[12..16].copy_from_slice(&size.to_le_bytes());
         }
+        let capability_length = if core.kind == DeviceKind::Console {
+            // A hotplugged downstream function identifies itself as a PCIe
+            // endpoint. Existing non-PCIe disk/network functions retain their
+            // exact capability chain.
+            capabilities[69] = 0x98;
+            capabilities[88] = 0x10;
+            capabilities[90..92].copy_from_slice(&2u16.to_le_bytes());
+            capabilities[100..104].copy_from_slice(&0x11u32.to_le_bytes());
+            capabilities[106..108].copy_from_slice(&0x11u16.to_le_bytes());
+            capabilities.len()
+        } else {
+            88
+        };
         // notify_off_multiplier=0: every queue writes its index to one doorbell.
+        let mut function = pci::Function::new(id, class, bar, &capabilities[..capability_length]);
+        if core.kind == DeviceKind::Console {
+            // Downstream slot zero preserves the pin during bridge swizzling.
+            // INTB keeps the endpoint separate from the root port's INTA.
+            function.use_interrupt_b();
+        }
         Self {
-            function: pci::Function::new(id, class, bar, &capabilities),
+            function,
             core,
             config_bar: 0,
             config_offset: 0,
@@ -189,6 +209,11 @@ impl Device {
 
     pub fn backend_lost(&mut self) {
         self.core.backend_lost();
+    }
+    /// A local backend stopped after a malformed queue. Unlike remote backend
+    /// loss, an ordinary status-zero reset may recover this device.
+    pub fn needs_reset(&mut self) {
+        self.core.status |= 64;
     }
     pub fn complete(&mut self, id: u64, success: bool) -> Result<(), Error> {
         self.core.complete(id, success)

@@ -539,6 +539,7 @@ impl<T: ControlTransport, N: NotificationControl> Backend<T, N> {
                                 self.memory_size,
                                 reply.network.ok_or(Error::InvalidState)?,
                             ),
+                            DeviceKind::Console => return Err(Error::InvalidState),
                         }
                         .map_err(Error::Device)?,
                     );
@@ -570,6 +571,7 @@ impl<T: ControlTransport, N: NotificationControl> Backend<T, N> {
                 command: match self.kind {
                     DeviceKind::Scsi => Command::Device(transaction.operation),
                     DeviceKind::Network => Command::NetworkDevice(transaction.operation),
+                    DeviceKind::Console => return Err(Error::InvalidState),
                 },
             },
             phase: Phase::Disable { started: false },

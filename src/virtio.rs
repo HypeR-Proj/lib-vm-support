@@ -17,6 +17,7 @@ use crate::virtio_net;
 pub enum DeviceKind {
     Scsi = 0,
     Network = 1,
+    Console = 2,
 }
 
 impl DeviceKind {
@@ -24,6 +25,7 @@ impl DeviceKind {
         match self {
             Self::Scsi => QUEUES,
             Self::Network => virtio_net::QUEUES,
+            Self::Console => 4,
         }
     }
 }
@@ -163,6 +165,15 @@ impl Device {
         // offloads, mergeable buffers, control queues and multiqueue stay off.
         device.offered |=
             virtio_net::MAC_FEATURE | virtio_net::supported_offloads(backend_features);
+        Ok(device)
+    }
+
+    /// One serial port, with the standard control queues when MULTIPORT is
+    /// negotiated. The port's policy and byte stream belong to its backend.
+    pub fn console(memory_base: u64, memory_size: u64) -> Result<Self, Error> {
+        let mut device = Self::new(VERSION_1, memory_base, memory_size)?;
+        device.kind = DeviceKind::Console;
+        device.offered |= crate::virtio_console::MULTIPORT;
         Ok(device)
     }
 
@@ -404,6 +415,12 @@ impl Device {
     fn validate_queues(&self) -> Result<(), Error> {
         let mut regions = [(0u64, 0u64); QUEUES * 3];
         for (index, queue) in self.queues().iter().copied().enumerate() {
+            if self.kind == DeviceKind::Console
+                && self.features & crate::virtio_console::MULTIPORT == 0
+                && index >= 2
+            {
+                continue;
+            }
             if !queue.ready {
                 if self.kind == DeviceKind::Scsi && index >= 3 {
                     continue;
@@ -437,6 +454,10 @@ impl Device {
 
     pub(crate) fn read_config(&self, offset: u64, width: u8) -> Result<u64, Error> {
         let mut bytes = [0u8; 36];
+        if self.kind == DeviceKind::Console {
+            bytes[4..8].copy_from_slice(&1u32.to_le_bytes());
+            return read_config_bytes(&bytes[..12], offset, width);
+        }
         if let Some(network) = self.network {
             bytes[..6].copy_from_slice(&network.mac);
             return read_config_bytes(&bytes[..6], offset, width);

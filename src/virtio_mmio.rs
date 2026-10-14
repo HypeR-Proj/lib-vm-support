@@ -44,6 +44,7 @@ impl Device {
             0x008 => match self.core.kind {
                 DeviceKind::Scsi => 8,
                 DeviceKind::Network => 1,
+                DeviceKind::Console => 3,
             },
             0x00c => 0, // No claimed vendor identifier.
             0x010 => {

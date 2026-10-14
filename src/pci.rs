@@ -48,6 +48,10 @@ impl Function {
         self.command
     }
 
+    pub(crate) fn use_interrupt_b(&mut self) {
+        self.bytes[0x3d] = 2;
+    }
+
     pub fn read(&self, offset: u64, width: u8) -> Option<u64> {
         if !valid_access(offset, width) {
             return None;
