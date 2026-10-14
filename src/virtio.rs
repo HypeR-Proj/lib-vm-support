@@ -111,6 +111,7 @@ pub struct Device {
     pub(crate) driver_selector: u32,
     pub(crate) queue_selector: u32,
     queues: [Queue; QUEUES],
+    scsi_request_queues: usize,
     pub(crate) status: u32,
     memory_base: u64,
     memory_end: u64,
@@ -139,6 +140,7 @@ impl Device {
             driver_selector: 0,
             queue_selector: 0,
             queues: [Queue::default(); QUEUES],
+            scsi_request_queues: REQUEST_QUEUES,
             status: 0,
             memory_base,
             memory_end,
@@ -177,8 +179,28 @@ impl Device {
         Ok(device)
     }
 
+    /// Set the backend's queue capacity before exposing the device to a guest.
+    pub fn scsi_with_queues(
+        features: u64,
+        base: u64,
+        size: u64,
+        request_queues: usize,
+    ) -> Result<Self, Error> {
+        if !(1..=REQUEST_QUEUES).contains(&request_queues) {
+            return Err(Error::UnsupportedBackend);
+        }
+        let mut device = Self::new(features, base, size)?;
+        device.scsi_request_queues = request_queues;
+        Ok(device)
+    }
+
     pub(crate) fn queues(&self) -> &[Queue] {
-        &self.queues[..self.kind.queue_count()]
+        let count = if self.kind == DeviceKind::Scsi {
+            2 + self.scsi_request_queues
+        } else {
+            self.kind.queue_count()
+        };
+        &self.queues[..count]
     }
 
     pub(crate) fn write(
@@ -462,7 +484,7 @@ impl Device {
             bytes[..6].copy_from_slice(&network.mac);
             return read_config_bytes(&bytes[..6], offset, width);
         }
-        for (index, value) in [REQUEST_QUEUES as u32, 126, 1024, 64, 16, 96, 32]
+        for (index, value) in [self.scsi_request_queues as u32, 126, 1024, 64, 16, 96, 32]
             .into_iter()
             .enumerate()
         {

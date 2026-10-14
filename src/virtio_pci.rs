@@ -242,7 +242,7 @@ impl Device {
                 }
             }
             (16, 2) | (26, 2) => 0xffff, // No MSI-X capability.
-            (18, 2) => self.core.kind.queue_count() as u64,
+            (18, 2) => self.core.queues().len() as u64,
             (20, 1) => u64::from(self.core.status),
             (21, 1) | (30, 2) => 0, // Stable configuration, shared doorbell.
             (22, 2) => u64::from(self.core.queue_selector),

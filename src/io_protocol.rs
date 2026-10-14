@@ -233,6 +233,7 @@ pub enum Status {
 pub struct Reply {
     pub status: Status,
     pub features: Option<u64>,
+    pub queues: Option<u32>,
     pub network: Option<virtio_net::Configuration>,
 }
 
@@ -276,7 +277,11 @@ impl Reply {
                 let features = u64_at(bytes, 48)?;
                 if status != Status::Success
                     || features & VERSION_1 == 0
-                    || u32_at(bytes, 56)? != request.command.device_kind().queue_count() as u32
+                    || if request.command == Command::Hello {
+                        !(3..=QUEUES as u32).contains(&u32_at(bytes, 56)?)
+                    } else {
+                        u32_at(bytes, 56)? != request.command.device_kind().queue_count() as u32
+                    }
                     || u32_at(bytes, 60)? != QUEUE_MAX
                 {
                     return Err(Error::UnsupportedBackend);
@@ -300,6 +305,7 @@ impl Reply {
         Ok(Self {
             status,
             features,
+            queues: features.map(|_| u32_at(bytes, 56)).transpose()?,
             network,
         })
     }

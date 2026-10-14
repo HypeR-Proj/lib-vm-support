@@ -19,7 +19,7 @@ use std::sync::Arc;
 type Result<T> = std::result::Result<T, String>;
 pub const RAM_BASE: u64 = 0x4000_0000;
 /// RAM budget for the resident, multi-client I/O appliance.
-pub const RAM_BYTES: u64 = 128 * 1024 * 1024;
+pub const RAM_BYTES: u64 = 64 * 1024 * 1024;
 pub const PHYSICAL_MMIO: u64 = 0x0b00_0000;
 pub const PHYSICAL_NET_MMIO: u64 = 0x0b01_0000;
 pub const PHYSICAL_NET_IRQ: u32 = 59;
@@ -87,7 +87,7 @@ impl Image {
         let plan = linux::validate_reference(&source, image).map_err(show)?;
         let source = source.into_inner();
         if plan.memory_base() != RAM_BASE
-            || ![64 * 1024 * 1024, RAM_BYTES].contains(&plan.memory_size())
+            || ![RAM_BYTES, 128 * 1024 * 1024].contains(&plan.memory_size())
             || plan.architecture() != hyper_vm_image::Architecture::Aarch64
         {
             return Err("I/O deployment requires 64 or 128 MiB AArch64 reference images".into());

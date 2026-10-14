@@ -12,8 +12,8 @@ pub(super) enum Device {
 }
 
 impl Device {
-    pub(super) fn new(features: u64, base: u64, size: u64) -> Result<Self, Error> {
-        virtio_mmio::Device::new(features, base, size).map(Self::Mmio)
+    pub(super) fn new(features: u64, base: u64, size: u64, queues: usize) -> Result<Self, Error> {
+        virtio_mmio::Device::scsi_with_queues(features, base, size, queues).map(Self::Mmio)
     }
     pub(super) fn network(
         features: u64,

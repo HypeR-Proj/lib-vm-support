@@ -530,9 +530,12 @@ impl<T: ControlTransport, N: NotificationControl> Backend<T, N> {
                     let features = reply.features.ok_or(Error::InvalidState)?;
                     self.device = Some(
                         match self.kind {
-                            DeviceKind::Scsi => {
-                                Device::new(features, self.memory_base, self.memory_size)
-                            }
+                            DeviceKind::Scsi => Device::new(
+                                features,
+                                self.memory_base,
+                                self.memory_size,
+                                reply.queues.ok_or(Error::InvalidState)? as usize - 2,
+                            ),
                             DeviceKind::Network => Device::network(
                                 features,
                                 self.memory_base,

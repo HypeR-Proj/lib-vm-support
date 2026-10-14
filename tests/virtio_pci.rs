@@ -12,6 +12,20 @@ fn device() -> Result<Device, Error> {
 }
 
 #[test]
+fn pci_reports_backend_queue_capacity() -> Result<(), Error> {
+    let mut device = Device::new(
+        virtio::Device::scsi_with_queues(VERSION_1, 0x4000_0000, 0x20_0000, 1)?,
+        0x0a00_0000,
+    );
+    device.function.write(4, 2, 6);
+    assert_eq!(device.read(18, 2)?, 3);
+    assert_eq!(device.read(DEVICE_OFFSET, 4)?, 1);
+    device.write(22, 2, 3)?;
+    assert_eq!(device.read(24, 2)?, 0);
+    Ok(())
+}
+
+#[test]
 fn pci_enumeration_bar_probe_and_capability_chain() -> Result<(), Error> {
     let mut device = device()?;
     let function = &mut device.function;

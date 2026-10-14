@@ -13,6 +13,15 @@ impl Device {
     pub fn new(features: u64, base: u64, size: u64) -> Result<Self, Error> {
         virtio::Device::new(features, base, size).map(|core| Self { core })
     }
+    pub fn scsi_with_queues(
+        features: u64,
+        base: u64,
+        size: u64,
+        request_queues: usize,
+    ) -> Result<Self, Error> {
+        virtio::Device::scsi_with_queues(features, base, size, request_queues)
+            .map(|core| Self { core })
+    }
     pub fn network(
         features: u64,
         base: u64,
