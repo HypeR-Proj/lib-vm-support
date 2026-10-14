@@ -8,7 +8,9 @@
 //! is completed only after the exact backend transaction is acknowledged.
 
 use crate::io_protocol::{self, Command, Reply, Request, Status};
-use crate::virtio_mmio::{self, BackendOperation, Device, DeviceKind, Transaction};
+use crate::virtio::{self, BackendOperation, DeviceKind, Transaction};
+mod device;
+use device::Device;
 use hyper_os::guest_io::{Mailbox, Notification, Operation};
 use hyper_os::vm::{MmioCompletion, MmioOperation, MmioRequest};
 use std::num::NonZeroU64;
@@ -17,7 +19,7 @@ use std::num::NonZeroU64;
 pub enum Error {
     Native(hyper_os::Error),
     Protocol(io_protocol::Error),
-    Device(virtio_mmio::Error),
+    Device(virtio::Error),
     BackendRejected(Status),
     Disconnected,
     InvalidState,
@@ -274,6 +276,96 @@ impl<T: ControlTransport, N: NotificationControl> Backend<T, N> {
         Ok(backend)
     }
 
+    /// Select PCI before exposing this initialized device to a guest.
+    pub fn use_pci(&mut self) -> Result<(), Error> {
+        if self.busy() || !self.ready() || self.pci_function().is_some() {
+            return Err(Error::InvalidState);
+        }
+        let device = self.device.take().ok_or(Error::InvalidState)?;
+        self.device = Some(
+            device
+                .into_pci(self.mmio_base as u32)
+                .map_err(Error::Device)?,
+        );
+        Ok(())
+    }
+    pub fn pci_function(&self) -> Option<&crate::pci::Function> {
+        match self.device.as_ref()? {
+            Device::Pci(device) => Some(device.function()),
+            _ => None,
+        }
+    }
+    pub fn write_pci_configuration(
+        &mut self,
+        offset: u64,
+        width: u8,
+        value: u64,
+    ) -> Result<Option<Transaction>, Error> {
+        match self.device.as_mut().ok_or(Error::InvalidState)? {
+            Device::Pci(device) => device
+                .write_configuration(offset, width, value)
+                .map_err(Error::Device),
+            _ => Err(Error::InvalidState),
+        }
+    }
+    pub fn pci_configuration_window(
+        &self,
+        offset: u64,
+        width: u8,
+    ) -> Result<Option<crate::virtio_pci::ConfigurationWindow>, Error> {
+        match self.device.as_ref() {
+            Some(Device::Pci(device)) => device
+                .configuration_window(offset, width)
+                .map_err(Error::Device),
+            _ => Err(Error::InvalidState),
+        }
+    }
+    pub fn pci_configuration_write_value(
+        &mut self,
+        offset: u64,
+        width: u8,
+        value: u64,
+    ) -> Result<u64, Error> {
+        match self.device.as_mut() {
+            Some(Device::Pci(device)) => device
+                .configuration_write_value(offset, width, value)
+                .map_err(Error::Device),
+            _ => Err(Error::InvalidState),
+        }
+    }
+    pub fn pci_configuration_read_result(
+        &mut self,
+        offset: u64,
+        width: u8,
+        value: u64,
+    ) -> Result<u64, Error> {
+        match self.device.as_mut() {
+            Some(Device::Pci(device)) => device
+                .configuration_read_result(offset, width, value)
+                .map_err(Error::Device),
+            _ => Err(Error::InvalidState),
+        }
+    }
+    pub fn read_pci_configuration(
+        &self,
+        offset: u64,
+        width: u8,
+        interrupt: bool,
+    ) -> Result<u64, Error> {
+        match self.device.as_ref() {
+            Some(Device::Pci(device)) => device
+                .read_configuration(offset, width, interrupt)
+                .map_err(Error::Device),
+            _ => Err(Error::InvalidState),
+        }
+    }
+    pub fn original_base(&self) -> u64 {
+        self.mmio_base
+    }
+    pub fn pci_slot(&self) -> u8 {
+        self.kind as u8 + 1
+    }
+
     pub fn device_id(&self) -> NonZeroU64 {
         self.device_id
     }
@@ -458,6 +550,35 @@ impl<T: ControlTransport, N: NotificationControl> Backend<T, N> {
         Ok(None)
     }
 
+    pub fn begin_transaction(
+        &mut self,
+        transaction: Transaction,
+        completion: Completion,
+    ) -> Result<(), Error> {
+        if self.busy() {
+            return Err(Error::InvalidState);
+        }
+        let next = self
+            .next_transaction
+            .checked_add(1)
+            .ok_or(Error::SequenceExhausted)?;
+        self.pending = Some(Pending {
+            request: Request {
+                binding: self.binding,
+                epoch: 0,
+                transaction: self.next_transaction,
+                command: match self.kind {
+                    DeviceKind::Scsi => Command::Device(transaction.operation),
+                    DeviceKind::Network => Command::NetworkDevice(transaction.operation),
+                },
+            },
+            phase: Phase::Disable { started: false },
+            guest: Some((transaction, completion)),
+        });
+        self.next_transaction = next;
+        Ok(())
+    }
+
     /// `None` means the instruction is deliberately parked. Other vCPUs may
     /// also park configuration requests while this single device transaction
     /// is outstanding; retry them after progress returns its completion.
@@ -471,9 +592,12 @@ impl<T: ControlTransport, N: NotificationControl> Backend<T, N> {
         if request.device != self.device_id {
             return Err(Error::InvalidState);
         }
+        let base = self
+            .pci_function()
+            .map_or(self.mmio_base, crate::pci::Function::bar);
         let offset = request
             .address
-            .checked_sub(self.mmio_base)
+            .checked_sub(base)
             .ok_or(Error::InvalidState)?;
         let device = self.device.as_mut().ok_or(Error::InvalidState)?;
         let width = u8::try_from(request.width).map_err(|_| Error::InvalidState)?;
@@ -491,26 +615,7 @@ impl<T: ControlTransport, N: NotificationControl> Backend<T, N> {
                 if let Some(transaction) =
                     device.write(offset, width, value).map_err(Error::Device)?
                 {
-                    let next = self
-                        .next_transaction
-                        .checked_add(1)
-                        .ok_or(Error::SequenceExhausted)?;
-                    self.pending = Some(Pending {
-                        request: Request {
-                            binding: self.binding,
-                            epoch: 0,
-                            transaction: self.next_transaction,
-                            command: match self.kind {
-                                DeviceKind::Scsi => Command::Device(transaction.operation),
-                                DeviceKind::Network => {
-                                    Command::NetworkDevice(transaction.operation)
-                                }
-                            },
-                        },
-                        phase: Phase::Disable { started: false },
-                        guest: Some((transaction, completion)),
-                    });
-                    self.next_transaction = next;
+                    self.begin_transaction(transaction, completion)?;
                     return Ok(None);
                 }
             }

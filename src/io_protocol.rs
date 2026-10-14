@@ -4,7 +4,7 @@
 //! Versioned control records shared with the independently built I/O appliance.
 //! No pointers, file descriptors or Rust layout cross this boundary.
 
-use crate::virtio_mmio::{BackendOperation, DeviceKind, QUEUE_MAX, QUEUES, VERSION_1};
+use crate::virtio::{BackendOperation, DeviceKind, QUEUE_MAX, QUEUES, VERSION_1};
 use crate::virtio_net;
 
 const MAGIC: u32 = 0x314f_4948;
@@ -90,7 +90,7 @@ impl Request {
             },
             6 => Command::Release,
             opcode @ (2 | 8) => {
-                let mut queues = [crate::virtio_mmio::Queue {
+                let mut queues = [crate::virtio::Queue {
                     size: 0,
                     descriptor: 0,
                     available: 0,
@@ -104,7 +104,7 @@ impl Request {
                 };
                 for (index, queue) in queues[..count].iter_mut().enumerate() {
                     let offset = 48 + index * 32;
-                    *queue = crate::virtio_mmio::Queue {
+                    *queue = crate::virtio::Queue {
                         size: u32_at(bytes, offset)?,
                         descriptor: u64_at(bytes, offset + 8)?,
                         available: u64_at(bytes, offset + 16)?,
@@ -189,7 +189,7 @@ impl Request {
                 let count = self.command.device_kind().queue_count();
                 if queues[count..]
                     .iter()
-                    .any(|queue| *queue != crate::virtio_mmio::Queue::default())
+                    .any(|queue| *queue != crate::virtio::Queue::default())
                 {
                     return Err(Error::InvalidRecord);
                 }

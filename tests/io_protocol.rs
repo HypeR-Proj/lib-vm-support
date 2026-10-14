@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use super::*;
-use crate::virtio_mmio::Queue;
+use crate::virtio::Queue;
 
 fn reset() -> Request {
     Request {

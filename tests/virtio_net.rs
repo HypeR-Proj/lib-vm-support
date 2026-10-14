@@ -2,7 +2,8 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use super::*;
-use crate::virtio_mmio::{BackendOperation, Device, Error, VERSION_1};
+use crate::virtio::{BackendOperation, Error, VERSION_1};
+use crate::virtio_mmio::Device;
 
 fn device() -> Result<Device, Error> {
     with_features(u64::MAX)

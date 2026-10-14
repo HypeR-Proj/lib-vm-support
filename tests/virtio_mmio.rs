@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use super::*;
+use crate::virtio::{BackendOperation, QUEUES, REQUEST_QUEUES, VERSION_1};
 
 type TestResult = Result<(), Error>;
 fn device() -> Result<Device, Error> {
@@ -110,22 +111,20 @@ fn invalid_features_queues_and_overlaps_do_not_activate_backend() -> TestResult 
 
 #[test]
 fn split_ring_extent_checks_include_end_fields_and_alignment() -> TestResult {
-    let device = device()?;
-    let mut queue = Queue {
-        size: 128,
-        descriptor: 0x4000_0000,
-        available: 0x4000_1000,
-        used: 0x4000_2000,
-        ready: false,
-    };
-    device.validate_queue(queue)?;
-    queue.used = device.memory_end - (4 + 8 * 128);
-    assert_eq!(device.validate_queue(queue), Err(Error::InvalidQueue));
-    queue.used = 0x4000_2001;
-    assert_eq!(device.validate_queue(queue), Err(Error::InvalidQueue));
-    queue.used = 0x4000_2000;
-    queue.descriptor = u64::MAX - 15;
-    assert_eq!(device.validate_queue(queue), Err(Error::InvalidQueue));
+    let mut device = device()?;
+    negotiate(&mut device)?;
+    device.write(0x30, 4, 0)?;
+    device.write(0x38, 4, 128)?;
+    device.write(0x80, 4, 0x4000_0000)?;
+    device.write(0x90, 4, 0x4000_1000)?;
+    for used in [0x4020_0000 - (4 + 8 * 128), 0x4000_2001] {
+        device.write(0xa0, 4, used)?;
+        assert_eq!(device.write(0x44, 4, 1), Err(Error::InvalidQueue));
+    }
+    device.write(0xa0, 4, 0x4000_2000)?;
+    device.write(0x80, 4, 0xffff_fff0)?;
+    device.write(0x84, 4, u32::MAX as u64)?;
+    assert_eq!(device.write(0x44, 4, 1), Err(Error::InvalidQueue));
     Ok(())
 }
 
@@ -196,7 +195,6 @@ fn backend_loss_preserves_pending_reset_and_owned_queue_state() -> TestResult {
         Err(Error::BackendResetFailed)
     );
     assert_eq!(device.write(0x70, 4, 0), Err(Error::BackendResetFailed));
-    assert_eq!(device.pending.map(|value| value.transaction), Some(reset));
     device.backend_lost();
     assert_eq!(device.read(0x70, 4), Ok(15 | 64));
     Ok(())

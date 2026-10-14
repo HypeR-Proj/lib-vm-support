@@ -68,9 +68,9 @@ impl Transport {
         bytes[40..48].fill(0);
         bytes[40..44].copy_from_slice(&status.to_le_bytes());
         if request.command == Command::Hello {
-            bytes[48..56].copy_from_slice(&virtio_mmio::VERSION_1.to_le_bytes());
-            bytes[56..60].copy_from_slice(&(virtio_mmio::QUEUES as u32).to_le_bytes());
-            bytes[60..64].copy_from_slice(&virtio_mmio::QUEUE_MAX.to_le_bytes());
+            bytes[48..56].copy_from_slice(&virtio::VERSION_1.to_le_bytes());
+            bytes[56..60].copy_from_slice(&(virtio::QUEUES as u32).to_le_bytes());
+            bytes[60..64].copy_from_slice(&virtio::QUEUE_MAX.to_le_bytes());
         }
         state.replies.push_back(bytes[..length as usize].to_vec());
         Ok(())
