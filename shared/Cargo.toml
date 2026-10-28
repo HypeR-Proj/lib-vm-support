@@ -21,8 +21,5 @@ implementation = { package = "hyper-vm-support", path = ".." }
 hyper-rust-std.workspace = true
 hyper-vm-policy-shared = { path = "../../vm-policy/shared" }
 
-[features]
-startup-profile = ["implementation/startup-profile"]
-
 [lints]
 workspace = true
