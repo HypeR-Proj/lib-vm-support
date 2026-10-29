@@ -53,5 +53,47 @@
       "app-test",
       "APP_TEST_PACKAGE=hyper-vm-support"
     ]
-  ]
+  ],
+  "cargo_context": {
+    "Cargo.toml": {
+      "workspace": null,
+      "membership": "../../app",
+      "dependency_paths": {
+        "/dependencies/hyper-service": "lib/service",
+        "/dependencies/hyper-vm-image": "lib/vm-image",
+        "/dependencies/hyper-vm-policy": "lib/vm-policy"
+      },
+      "inherited_dependencies": {
+        "/dependencies/hyper-os": {
+          "workspace": true,
+          "features": [
+            "std"
+          ]
+        },
+        "/dependencies/hyper-service": {
+          "workspace": true
+        },
+        "/dependencies/hyper-vm-image": {
+          "workspace": true
+        },
+        "/dependencies/hyper-vm-policy": {
+          "workspace": true
+        }
+      }
+    },
+    "shared/Cargo.toml": {
+      "workspace": null,
+      "membership": "../../../app",
+      "dependency_paths": {
+        "/dependencies/implementation": "lib/vm-support",
+        "/dependencies/hyper-rust-std": "stdlib/rust-std",
+        "/dependencies/hyper-vm-policy-shared": "lib/vm-policy/shared"
+      },
+      "inherited_dependencies": {
+        "/dependencies/hyper-rust-std": {
+          "workspace": true
+        }
+      }
+    }
+  }
 }
