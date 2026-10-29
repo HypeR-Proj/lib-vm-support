@@ -1,0 +1,57 @@
+{
+  "version": 1,
+  "name": "vm-support",
+  "kind": "library",
+  "origin": {
+    "repository": "https://github.com/roolrz/HypeR",
+    "commit": "8d42d047058a2b58a291803700e86487fb723f7a"
+  },
+  "sources": {
+    "Cargo.toml": "lib/vm-support/Cargo.toml",
+    "component.mk": "lib/vm-support/component.mk",
+    "shared/Cargo.toml": "lib/vm-support/shared/Cargo.toml",
+    "shared/src/lib.rs": "lib/vm-support/shared/src/lib.rs",
+    "src/block_protocol.rs": "lib/vm-support/src/block_protocol.rs",
+    "src/io_backend.rs": "lib/vm-support/src/io_backend.rs",
+    "src/io_backend/device.rs": "lib/vm-support/src/io_backend/device.rs",
+    "src/io_guest.rs": "lib/vm-support/src/io_guest.rs",
+    "src/io_protocol.rs": "lib/vm-support/src/io_protocol.rs",
+    "src/lib.rs": "lib/vm-support/src/lib.rs",
+    "src/pci.rs": "lib/vm-support/src/pci.rs",
+    "src/pcie.rs": "lib/vm-support/src/pcie.rs",
+    "src/profile.rs": "lib/vm-support/src/profile.rs",
+    "src/virtio.rs": "lib/vm-support/src/virtio.rs",
+    "src/virtio_console.rs": "lib/vm-support/src/virtio_console.rs",
+    "src/virtio_mmio.rs": "lib/vm-support/src/virtio_mmio.rs",
+    "src/virtio_net.rs": "lib/vm-support/src/virtio_net.rs",
+    "src/virtio_pci.rs": "lib/vm-support/src/virtio_pci.rs",
+    "src/virtqueue.rs": "lib/vm-support/src/virtqueue.rs",
+    "tests/block_protocol.rs": "lib/vm-support/tests/block_protocol.rs",
+    "tests/io_backend.rs": "lib/vm-support/tests/io_backend.rs",
+    "tests/io_protocol.rs": "lib/vm-support/tests/io_protocol.rs",
+    "tests/pcie.rs": "lib/vm-support/tests/pcie.rs",
+    "tests/profile.rs": "lib/vm-support/tests/profile.rs",
+    "tests/virtio_console.rs": "lib/vm-support/tests/virtio_console.rs",
+    "tests/virtio_mmio.rs": "lib/vm-support/tests/virtio_mmio.rs",
+    "tests/virtio_net.rs": "lib/vm-support/tests/virtio_net.rs",
+    "tests/virtio_pci.rs": "lib/vm-support/tests/virtio_pci.rs",
+    "tests/virtqueue.rs": "lib/vm-support/tests/virtqueue.rs",
+    "tests/virtqueue_memory.rs": "lib/vm-support/tests/virtqueue_memory.rs"
+  },
+  "SPDX-FileCopyrightText": "2026 roolrz",
+  "SPDX-License-Identifier": "Apache-2.0",
+  "mounts": {
+    "": "lib/vm-support"
+  },
+  "packages": [
+    "hyper-vm-support",
+    "hyper-vm-support-shared"
+  ],
+  "tests": [
+    [
+      "make",
+      "app-test",
+      "APP_TEST_PACKAGE=hyper-vm-support"
+    ]
+  ]
+}
