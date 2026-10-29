@@ -1,31 +1,36 @@
 # SPDX-FileCopyrightText: 2026 roolrz
 # SPDX-License-Identifier: Apache-2.0
 
+
 [package]
 name = "hyper-vm-support-shared"
 version = "0.0.0"
 edition = "2024"
 license = "Apache-2.0"
-repository = "https://github.com/HypeR-Proj/vm-support"
+repository = "https://github.com/HypeR-Proj/lib-vm-support"
 publish = false
+workspace = "../../../app"
 
 [lib]
-crate-type = [
-    "dylib",
-]
+crate-type = ["dylib"]
 test = false
 bench = false
 doctest = false
+
+[dependencies]
 
 [dependencies.implementation]
 package = "hyper-vm-support"
 path = ".."
 
 [dependencies.hyper-rust-std]
-version = "=0.0.0"
+workspace = true
 
 [dependencies.hyper-vm-policy-shared]
 version = "=0.0.0"
+path = "../../vm-policy/shared"
+
+[lints]
 
 [lints.clippy]
 doc_markdown = "deny"
@@ -44,6 +49,4 @@ unsafe_op_in_unsafe_fn = "deny"
 
 [lints.rust.unexpected_cfgs]
 level = "warn"
-check-cfg = [
-    "cfg(target_os, values(\"hyper\"))",
-]
+check-cfg = ["cfg(target_os, values(\"hyper\"))"]
