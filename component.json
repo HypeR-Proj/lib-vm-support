@@ -18,5 +18,68 @@
       "app-test",
       "APP_TEST_PACKAGE=hyper-vm-support"
     ]
-  ]
+  ],
+  "cargo": [
+    {
+      "manifest": "Cargo.toml",
+      "domain": "system"
+    },
+    {
+      "manifest": "shared/Cargo.toml",
+      "domain": "system"
+    }
+  ],
+  "artifacts": [
+    {
+      "library": "libhyper_vm_support_shared.so",
+      "staged": "lib/libhyper_vm_support_shared.so",
+      "destination": "lib64/{arch}-hyper-hyper/libhyper_vm_support_shared.so",
+      "mode": "0755",
+      "profiles": [
+        "system",
+        "development",
+        "io"
+      ],
+      "rust_runtime": "std",
+      "environment": "system",
+      "manifest": "shared/Cargo.toml"
+    }
+  ],
+  "build": {
+    "requires": [
+      "toolchain"
+    ],
+    "actions": {
+      "all": [
+        [
+          "python3",
+          "{workspace}/scripts/build-native-module.py",
+          "--module",
+          "{module}",
+          "--action",
+          "{action}"
+        ]
+      ],
+      "build": [
+        [
+          "python3",
+          "{workspace}/scripts/build-native-module.py",
+          "--module",
+          "{module}",
+          "--action",
+          "{action}"
+        ]
+      ],
+      "check": [
+        [
+          "python3",
+          "{workspace}/scripts/build-native-module.py",
+          "--module",
+          "{module}",
+          "--action",
+          "{action}"
+        ]
+      ]
+    }
+  }
 }
