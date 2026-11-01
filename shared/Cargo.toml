@@ -29,7 +29,6 @@ path = "../../../stdlib/rust-std"
 default-features = false
 
 [dependencies.hyper-vm-policy-shared]
-version = "=0.1.0"
 path = "../../vm-policy/shared"
 default-features = false
 
