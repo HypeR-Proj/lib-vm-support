@@ -10,7 +10,7 @@ fn scsi_backend_capacity_limits_visible_queues() -> Result<(), Error> {
             Device::scsi_with_queues(crate::virtio::VERSION_1, 0x4000_0000, 0x20_0000, count)?;
         assert_eq!(device.read(0x100, 4)?, count as u64);
         device.write(0x030, 4, (count + 1) as u64)?;
-        assert_eq!(device.read(0x034, 4)?, QUEUE_MAX.into());
+        assert_eq!(device.read(0x034, 4)?, u64::from(QUEUE_MAX));
         device.write(0x030, 4, (count + 2) as u64)?;
         assert_eq!(device.read(0x034, 4)?, 0);
         assert_eq!(device.write(0x044, 4, 0), Err(Error::InvalidQueue));
