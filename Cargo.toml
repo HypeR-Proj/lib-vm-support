@@ -4,28 +4,24 @@
 
 [package]
 name = "hyper-vm-support"
-version = "0.0.0"
+version = "0.1.0"
 edition = "2024"
 license = "Apache-2.0"
 repository = "https://github.com/HypeR-Proj/lib-vm-support"
 publish = false
 autotests = false
-workspace = "../../app"
 
 [dependencies]
 
 [dependencies.hyper-os]
-workspace = true
+version = "=0.0.0"
 features = ["std"]
 
 [dependencies.hyper-service]
-workspace = true
+path = "../service"
 
 [dependencies.hyper-vm-image]
-workspace = true
-
-[dependencies.hyper-vm-policy]
-workspace = true
+path = "../vm-image"
 
 [lints]
 
@@ -47,3 +43,32 @@ unsafe_op_in_unsafe_fn = "deny"
 [lints.rust.unexpected_cfgs]
 level = "warn"
 check-cfg = ["cfg(target_os, values(\"hyper\"))"]
+
+[features]
+shared = ["dep:hyper-vm-policy-shared"]
+
+[dependencies.hyper-vm-policy-static]
+package = "hyper-vm-policy"
+path = "../vm-policy"
+
+[target.'cfg(target_os = "hyper")'.dependencies.hyper-vm-policy-shared]
+path = "../vm-policy/shared"
+default-features = false
+optional = true
+
+[workspace]
+resolver = "3"
+members = ["shared"]
+exclude = ["tests/link"]
+
+[profile]
+
+[profile.release]
+codegen-units = 1
+debug = 1
+incremental = false
+lto = "fat"
+opt-level = "s"
+overflow-checks = true
+panic = "abort"
+strip = "none"

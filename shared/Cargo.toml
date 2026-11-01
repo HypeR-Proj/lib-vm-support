@@ -4,12 +4,12 @@
 
 [package]
 name = "hyper-vm-support-shared"
-version = "0.0.0"
+version = "0.1.0"
 edition = "2024"
 license = "Apache-2.0"
 repository = "https://github.com/HypeR-Proj/lib-vm-support"
 publish = false
-workspace = "../../../app"
+workspace = ".."
 
 [lib]
 crate-type = ["dylib"]
@@ -22,13 +22,16 @@ doctest = false
 [dependencies.implementation]
 package = "hyper-vm-support"
 path = ".."
+features = ["shared"]
 
 [dependencies.hyper-rust-std]
-workspace = true
+path = "../../../stdlib/rust-std"
+default-features = false
 
 [dependencies.hyper-vm-policy-shared]
-version = "=0.0.0"
+version = "=0.1.0"
 path = "../../vm-policy/shared"
+default-features = false
 
 [lints]
 

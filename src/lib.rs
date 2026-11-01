@@ -19,3 +19,8 @@ pub mod virtqueue;
 
 #[cfg(all(target_os = "hyper", target_arch = "aarch64"))]
 pub mod io_guest;
+
+#[cfg(all(target_os = "hyper", feature = "shared"))]
+extern crate hyper_vm_policy_shared as hyper_vm_policy;
+#[cfg(not(all(target_os = "hyper", feature = "shared")))]
+extern crate hyper_vm_policy_static as hyper_vm_policy;
